@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AI 翻译 · gpt-4.1-mini</title>
+  <style>
+    :root { --bg:#0b1020; --card:#121a33; --text:#eef3ff; --muted:#a9b4d0; --btn:#3b82f6; --btn2:#334155; }
+    *{box-sizing:border-box} body{margin:0;font-family:ui-sans-serif,system-ui,Segoe UI,Roboto;color:var(--text);background:linear-gradient(180deg,#0b1020,#0e1430)}
+    .container{max-width:980px;margin:40px auto;padding:16px}
+    .card{background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:20px;box-shadow:0 8px 30px rgba(0,0,0,.35)}
+    h1{margin:0 0 8px;font-size:24px}
+    p.meta{margin:0 0 20px;color:var(--muted)}
+    label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+    textarea{width:100%;min-height:160px;background:#0a0f22;color:var(--text);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px;font-size:14px;resize:vertical;outline:none}
+    select,input[type="text"],input[type="password"]{width:100%;background:#0a0f22;color:var(--text);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px;font-size:14px;outline:none}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+    .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+    button{appearance:none;border:none;border-radius:12px;padding:10px 14px;font-weight:600;cursor:pointer;transition:.15s}
+    .primary{background:var(--btn);color:white} .secondary{background:var(--btn2);color:#e2e8f0}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    .result{position:relative}
+    .muted{color:var(--muted)}
+    .footer{margin-top:18px;color:var(--muted);font-size:12px;text-align:center}
+    .pill{display:inline-block;padding:3px 8px;border-radius:999px;background:#0a0f22;border:1px solid rgba(255,255,255,.08);font-size:12px}
+    .inline{display:flex;align-items:center;gap:8px}
+    .hint{font-size:12px;color:var(--muted)}
+    .small-gap{margin-top:8px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>AI 翻译</h1>
+      <p class="meta">默认模型：<span class="pill">gpt-4.1-mini</span> · 使用 Netlify Function 安全调用 OpenAI 官方 API</p>
+
+      <div class="row small-gap">
+        <div>
+          <label for="sourceLang">源语言</label>
+          <select id="sourceLang">
+            <option value="auto" selected>自动检测</option>
+            <option>中文</option><option>English</option><option>日本語</option><option>한국어</option>
+            <option>Español</option><option>Français</option><option>Deutsch</option><option>Русский</option>
+            <option>Português</option><option>Italiano</option><option>ไทย</option><option>العربية</option><option>हिन्दी</option>
+          </select>
+        </div>
+        <div>
+          <label for="targetLang">目标语言</label>
+          <select id="targetLang">
+            <option>English</option><option selected>中文</option><option>日本語</option><option>한국어</option>
+            <option>Español</option><option>Français</option><option>Deutsch</option><option>Русский</option>
+            <option>Português</option><option>Italiano</option><option>ไทย</option><option>العربية</option><option>हिन्दी</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="btns">
+        <button id="swapBtn" class="secondary" title="交换源语言与目标语言">⇄ 交换语言</button>
+      </div>
+
+      <div class="small-gap">
+        <label for="inputText">输入文本</label>
+        <textarea id="inputText" placeholder="在此粘贴待翻译内容…"></textarea>
+      </div>
+
+      <div class="row-3 small-gap">
+        <div>
+          <label for="model">模型</label>
+          <select id="model">
+            <option value="gpt-4.1-mini" selected>gpt-4.1-mini（默认）</option>
+            <option value="gpt-4.1">gpt-4.1</option>
+            <option value="gpt-4o-mini">gpt-4o-mini</option>
+            <option value="o4-mini">o4-mini</option>
+          </select>
+        </div>
+        <div>
+          <label for="customKey">自定义 OpenAI Key（可选）</label>
+          <input id="customKey" type="password" placeholder="sk-..." disabled />
+        </div>
+        <div class="inline" style="align-self:end">
+          <input id="useCustomKey" type="checkbox" />
+          <label for="useCustomKey">启用自定义 Key</label>
+        </div>
+      </div>
+
+      <div class="btns">
+        <button id="translateBtn" class="primary">开始翻译</button>
+        <button id="clearBtn" class="secondary">清空</button>
+        <span id="status" class="hint"></span>
+      </div>
+
+      <div class="small-gap result">
+        <label for="outputText">翻译结果</label>
+        <textarea id="outputText" placeholder="翻译结果将显示在这里…" readonly></textarea>
+        <div class="btns">
+          <button id="copyBtn" class="secondary">复制结果</button>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div>后端使用环境变量 <code>OPENAI_API_KEY</code>（Netlify 设置）。如勾选“启用自定义 Key”，则优先使用你输入的 Key。</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const $ = (id)=>document.getElementById(id);
+    const inputText = $("inputText");
+    const outputText = $("outputText");
+    const sourceLang = $("sourceLang");
+    const targetLang = $("targetLang");
+    const translateBtn = $("translateBtn");
+    const clearBtn = $("clearBtn");
+    const statusEl = $("status");
+    const copyBtn = $("copyBtn");
+    const swapBtn = $("swapBtn");
+    const modelSel = $("model");
+    const customKeyInput = $("customKey");
+    const useCustomKey = $("useCustomKey");
+
+    useCustomKey.addEventListener("change", ()=>{
+      customKeyInput.disabled = !useCustomKey.checked;
+      if(!useCustomKey.checked) customKeyInput.value="";
+    });
+
+    swapBtn.addEventListener("click", ()=>{
+      const s = sourceLang.value;
+      const t = targetLang.value;
+      if (s === "auto") {
+        // 若源语言为自动检测，交换时只把目标赋给源，并将目标改为中文
+        sourceLang.value = t;
+        targetLang.value = (t === "中文") ? "English" : "中文";
+      } else {
+        sourceLang.value = t;
+        targetLang.value = s;
+      }
+    });
+
+    clearBtn.addEventListener("click", ()=>{
+      inputText.value="";
+      outputText.value="";
+      statusEl.textContent="";
+    });
+
+    copyBtn.addEventListener("click", async ()=>{
+      try {
+        await navigator.clipboard.writeText(outputText.value || "");
+        statusEl.textContent = "已复制到剪贴板";
+        setTimeout(()=>statusEl.textContent="",1500);
+      } catch(e){
+        statusEl.textContent = "复制失败";
+      }
+    });
+
+    translateBtn.addEventListener("click", async ()=>{
+      const text = inputText.value.trim();
+      if (!text) { statusEl.textContent = "请先输入文本"; return; }
+
+      translateBtn.disabled = true;
+      statusEl.textContent = "翻译中…";
+
+      try {
+        const res = await fetch("/.netlify/functions/translate", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({
+            text,
+            sourceLang: sourceLang.value,
+            targetLang: targetLang.value,
+            model: modelSel.value,
+            customKey: useCustomKey.checked ? (customKeyInput.value || "").trim() : undefined
+          })
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(()=>({error:`HTTP ${res.status}`}));
+          throw new Error(err.error || `HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        outputText.value = data.translation || "";
+        statusEl.textContent = "完成";
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = "出错：" + err.message;
+        outputText.value = "";
+      } finally {
+        translateBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
